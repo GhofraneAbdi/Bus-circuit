@@ -546,30 +546,15 @@ async function generateDayPdf(){
     const pageHeight = pdf.internal.pageSize.getHeight();
     const usableWidth = pageWidth - margin*2;
     const usableHeight = pageHeight - margin*2;
-    const scaleRatio = usableWidth / canvas.width;
-    const totalHeightPt = canvas.height * scaleRatio;
 
-    if(totalHeightPt <= usableHeight){
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, usableWidth, totalHeightPt);
-    } else {
-      // المحتوى أطول من صفحة واحدة — نقصّه إلى شرائح ونوزّعها على عدة صفحات
-      const sliceHeightPx = Math.floor(usableHeight / scaleRatio);
-      let renderedPx = 0;
-      let first = true;
-      while(renderedPx < canvas.height){
-        const thisSliceHeight = Math.min(sliceHeightPx, canvas.height - renderedPx);
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = thisSliceHeight;
-        sliceCanvas.getContext('2d').drawImage(
-          canvas, 0, renderedPx, canvas.width, thisSliceHeight, 0, 0, canvas.width, thisSliceHeight
-        );
-        if(!first) pdf.addPage();
-        pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, usableWidth, thisSliceHeight * scaleRatio);
-        renderedPx += thisSliceHeight;
-        first = false;
-      }
-    }
+    // نضغط المحتوى ليدخل ضمن صفحة واحدة دائمًا (بدل توزيعه على عدة صفحات)،
+    // باختيار أصغر نسبة تكبير تجعله يلائم العرض والارتفاع المتاحين معًا.
+    const scaleRatio = Math.min(usableWidth / canvas.width, usableHeight / canvas.height);
+    const imgWidth = canvas.width * scaleRatio;
+    const imgHeight = canvas.height * scaleRatio;
+    const x = margin + (usableWidth - imgWidth) / 2;
+    const y = margin;
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, imgWidth, imgHeight);
 
     pdf.save(`ملخص-${mode().title}-${new Date().toISOString().slice(0,10)}.pdf`);
   }catch(e){
