@@ -472,6 +472,7 @@ function render(){
       </div>
       <div class="row-actions">
         <div class="check" title="تم الاستلام/التوصيل">${done ? '✓' : ''}</div>
+        <div class="mark-absent" title="غائب">✕</div>
       </div>
     </li>`;
   }).join('');
@@ -488,6 +489,11 @@ function render(){
         showCopyBanner(isLast ? allDoneMessage() : messageFor(stop.name));
       }
       render();
+    };
+    li.querySelector('.mark-absent').onclick = () => {
+      setStatus(id, 'absent');
+      document.getElementById('copy-banner').classList.remove('show');
+      optimizeAndDrawRoute(); // المحطات النشطة تغيّرت — أعِد حساب أفضل مسار
     };
   });
 
