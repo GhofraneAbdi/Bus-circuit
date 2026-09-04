@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>دورة الصباح — رحلة آمنة</title>
+<title>رحلة آمنة — مسار الذهاب والعودة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -32,7 +32,7 @@
   }
   .wrap{ max-width: 480px; margin: 0 auto; padding: 28px 18px 60px; }
 
-  header{ margin-bottom: 22px; }
+  header{ margin-bottom: 16px; }
   .eyebrow{ font-size: 13px; color: var(--rose-deep); font-weight:700; }
   h1{
     font-family:'Markazi Text', serif;
@@ -42,6 +42,17 @@
     margin: 4px 0 6px;
   }
   .sub{ color: var(--muted); font-size: 14.5px; }
+
+  .mode-tabs{
+    display:flex; gap:8px; margin: 16px 0 20px;
+    background: var(--line); padding:4px; border-radius:13px;
+  }
+  .mode-tab{
+    flex:1; border:none; background:transparent; padding:10px 8px;
+    border-radius:10px; font-family:'Tajawal', sans-serif; font-weight:700;
+    font-size:14px; color: var(--rose-deep); cursor:pointer;
+  }
+  .mode-tab.active{ background:#fff; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
 
   .progress-row{
     display:flex; align-items:center; gap:12px;
@@ -91,7 +102,33 @@
   .all-done .name{ font-family:'Markazi Text', serif; font-size:25px; font-weight:700; color:#3E6B54; margin-bottom:4px;}
   .all-done .meta{ color:#5C8A72; font-size:14px; }
 
-  #map{ height:280px; border-radius:16px; margin-bottom:22px; border:1px solid var(--line); }
+  #map{ height:280px; border-radius:16px; margin-bottom:16px; border:1px solid var(--line); }
+
+  .gmaps-links{ display:flex; gap:8px; margin-bottom:22px; flex-wrap:wrap; }
+  .gmaps-btn{
+    flex:1; min-width:150px; text-align:center;
+    background:#fff; border:1px solid var(--line); color:var(--rose-deep);
+    font-weight:700; font-size:13.5px; padding:11px 10px; border-radius:12px;
+    text-decoration:none; display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .gmaps-btn:active{ background: var(--bg); }
+
+  .copy-banner{
+    display:none; background: var(--sage-bg); border:1px solid #CFE6D8;
+    border-radius:16px; padding:16px; margin-bottom:18px;
+  }
+  .copy-banner.show{ display:block; }
+  .copy-label{ font-size:12.5px; font-weight:700; color:#3E6B54; margin-bottom:8px; }
+  .copy-text{
+    background:#fff; border-radius:10px; padding:11px 12px; font-size:14.5px;
+    color:var(--ink); line-height:1.5; margin-bottom:10px; word-break:break-word;
+  }
+  .copy-btn{
+    width:100%; background: var(--sage); color:#fff; border:none;
+    font-weight:800; font-size:14.5px; padding:11px; border-radius:11px;
+    cursor:pointer; font-family:'Tajawal', sans-serif;
+  }
+  .copy-btn:active{ transform: scale(.99); }
 
   .section-title{
     font-size:13.5px; font-weight:700; color:var(--muted);
@@ -131,10 +168,15 @@
 <div class="wrap">
 
   <header>
-    <div class="eyebrow">رحلة آمنة · دورة الصباح</div>
-    <h1>مسار اليوم</h1>
-    <div class="sub">١٤ محطة، مرتّبة حسب أفضل مسار على الطرق الفعلية</div>
+    <div class="eyebrow" id="eyebrow">رحلة آمنة · الذهاب</div>
+    <h1 id="page-title">مسار الذهاب</h1>
+    <div class="sub" id="page-sub">١٤ منزلًا، مرتّبة حسب أفضل مسار إلى المدرسة</div>
   </header>
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="tab-morning" data-mode="morning">↦ الذهاب</button>
+    <button class="mode-tab" id="tab-afternoon" data-mode="afternoon">↤ العودة</button>
+  </div>
 
   <div class="progress-row">
     <div class="ring">
@@ -144,26 +186,30 @@
       </svg>
       <div class="ring-label" id="ring-label">0/14</div>
     </div>
-    <div class="progress-text" id="progress-text">لم يتم استلام أي طالب بعد — اضغط <b>توجيه</b> للانطلاق إلى المحطة الأولى.</div>
+    <div class="progress-text" id="progress-text"></div>
   </div>
 
   <div id="current-slot"></div>
 
+  <div class="copy-banner" id="copy-banner"></div>
+
   <div id="map"></div>
+
+  <div class="gmaps-links" id="gmaps-links"></div>
 
   <div class="section-title">الترتيب الكامل</div>
   <ul class="stops" id="stops-list"></ul>
 
-  <button class="reset" id="reset-btn">إعادة تعيين تقدّم اليوم</button>
-  <footer>العامرات · مسار مدرسي لـ ١٤ محطة</footer>
+  <button class="reset" id="reset-btn">إعادة تعيين تقدّم هذه الرحلة</button>
+  <footer id="page-footer">العامرات · مسار الذهاب — ١٤ محطة</footer>
 </div>
 
 <script>
-const START = { name: "نقطة الانطلاق", lat: 23.469158, lng: 58.475975 };
-const END   = { name: "المدرسة (نقطة التسليم)", lat: 23.534421, lng: 58.456905 };
+const HOME   = { name: "نقطة الانطلاق", lat: 23.469158, lng: 58.475975 };
+const SCHOOL = { name: "المدرسة", lat: 23.534421, lng: 58.456905 };
 
-// إحداثيات المحطات الخام — الترتيب هنا لا يهم، سيُعاد ترتيبها فعليًا
-// حسب أفضل مسار على الطرق الحقيقية بعد استجابة خدمة التوجيه.
+// إحداثيات المنازل الخام — نفس المحطات تُستخدم في الاتجاهين،
+// فقط نقطتا البداية والنهاية تتبادلان حسب الرحلة المختارة.
 const RAW_STOPS = [
   { lat: 23.477276, lng: 58.474827 },
   { lat: 23.479507, lng: 58.476406 },
@@ -181,18 +227,54 @@ const RAW_STOPS = [
   { lat: 23.492619, lng: 58.483624 },
 ];
 
-// ترتيب احتياطي (تقريبي) يُستخدم فقط إذا تعذّر الوصول لخدمة التوجيه
-let STOPS = RAW_STOPS.map((s, i) => ({ ...s, name: "المحطة " + (i + 1) }));
+const MODES = {
+  morning: {
+    start: HOME, end: SCHOOL,
+    eyebrow: "رحلة آمنة · الذهاب",
+    title: "مسار الذهاب",
+    sub: "١٤ منزلًا، مرتّبة حسب أفضل مسار إلى المدرسة",
+    footer: "العامرات · مسار الذهاب — ١٤ محطة",
+    nextLabel: "المنزل التالي",
+    doneBtn: "تم الاستلام",
+    noneYetText: "لم يتم استلام أي طالب بعد — توجّهي إلى أول منزل.",
+    progressVerb: "تم استلام",
+    allDoneTitle: "الجميع في الحافلة 🌅",
+    endBtnLabel: "↗ التوجه إلى المدرسة",
+    msgVerb: "تم استلام طالب",
+    allDoneMsg: n => `🌅 اكتمل استلام جميع الطلاب (${n}/${n}) — التوجه الآن إلى المدرسة`,
+  },
+  afternoon: {
+    start: SCHOOL, end: HOME,
+    eyebrow: "رحلة آمنة · العودة",
+    title: "مسار العودة",
+    sub: "١٤ منزلًا، بالاتجاه المعاكس بعد نهاية اليوم الدراسي",
+    footer: "العامرات · مسار العودة — ١٤ محطة",
+    nextLabel: "المنزل التالي",
+    doneBtn: "تم التوصيل",
+    noneYetText: "لم يتم توصيل أي طالب بعد — انطلقي من المدرسة.",
+    progressVerb: "تم توصيل",
+    allDoneTitle: "انتهت الرحلة 🏠",
+    endBtnLabel: "↗ التوجه إلى نقطة الانطلاق",
+    msgVerb: "تم توصيل طالب",
+    allDoneMsg: n => `🏠 تم توصيل جميع الطلاب (${n}/${n}) — انتهت الرحلة`,
+  },
+};
 
-const todayKey = () => "route-progress:" + new Date().toISOString().slice(0,10);
+let currentModeKey = "morning";
+let STOPS = RAW_STOPS.map((s, i) => ({ ...s, name: "المحطة " + (i + 1) }));
 let completed = new Set();
 
+function mode(){ return MODES[currentModeKey]; }
+
+function todayKey(){
+  return "route-progress:" + currentModeKey + ":" + new Date().toISOString().slice(0,10);
+}
 function loadProgress(){
+  completed = new Set();
   try{
     const raw = localStorage.getItem(todayKey());
     if(raw){ completed = new Set(JSON.parse(raw)); }
   }catch(e){ /* لا يوجد تقدم محفوظ بعد، أو التخزين غير متاح */ }
-  render();
 }
 function saveProgress(){
   try{
@@ -206,7 +288,72 @@ function navUrl(lat, lng){
   return "https://www.google.com/maps/dir/?api=1&destination=" + lat + "," + lng + "&travelmode=driving";
 }
 
+// خرائط Google تسمح بحد أقصى ١٠ نقاط (بداية + نهاية + محطات وسيطة) في
+// رابط توجيه واحد. بما أن مسارنا يضم ١٦ نقطة (البداية + ١٤ محطة + النهاية)،
+// نقسمه إلى أجزاء متتالية، كل جزء ينتهي حيث يبدأ التالي.
+function buildLegs(points){
+  const maxPerLeg = 10;
+  const legs = [];
+  let start = 0;
+  while(start < points.length - 1){
+    const end = Math.min(start + maxPerLeg - 1, points.length - 1);
+    legs.push(points.slice(start, end + 1));
+    start = end;
+  }
+  return legs;
+}
+function legUrl(leg){
+  const origin = leg[0];
+  const destination = leg[leg.length - 1];
+  const mids = leg.slice(1, -1);
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving`;
+  if(mids.length) url += `&waypoints=${mids.map(p => p.lat + "," + p.lng).join("|")}`;
+  return url;
+}
+function renderGoogleMapsLinks(){
+  const points = [mode().start, ...STOPS, mode().end];
+  const legs = buildLegs(points);
+  const container = document.getElementById('gmaps-links');
+  container.innerHTML = legs.map((leg, i) => {
+    const label = legs.length > 1 ? `↗ خرائط Google — الجزء ${i + 1}` : "↗ فتح المسار كاملًا في خرائط Google";
+    return `<a class="gmaps-btn" href="${legUrl(leg)}" target="_blank" rel="noopener">${label}</a>`;
+  }).join('');
+}
+
+function messageFor(stopName){
+  const time = new Date().toLocaleTimeString('ar-OM', { hour:'2-digit', minute:'2-digit' });
+  return `✅ ${mode().msgVerb} — ${stopName} — الساعة ${time}`;
+}
+function allDoneMessage(){
+  const time = new Date().toLocaleTimeString('ar-OM', { hour:'2-digit', minute:'2-digit' });
+  return mode().allDoneMsg(STOPS.length) + ` — الساعة ${time}`;
+}
+
+function showCopyBanner(message){
+  const banner = document.getElementById('copy-banner');
+  banner.innerHTML = `
+    <div class="copy-label">جاهزة للنسخ إلى مجموعة الواتساب</div>
+    <div class="copy-text" id="copy-text">${message}</div>
+    <button class="copy-btn" id="copy-btn">نسخ الرسالة</button>`;
+  banner.classList.add('show');
+  document.getElementById('copy-btn').onclick = async () => {
+    const btn = document.getElementById('copy-btn');
+    try{
+      await navigator.clipboard.writeText(message);
+    }catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = message; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); }catch(e2){}
+      document.body.removeChild(ta);
+    }
+    btn.textContent = "تم النسخ ✓";
+    setTimeout(() => { if(document.getElementById('copy-btn')) btn.textContent = "نسخ الرسالة"; }, 2000);
+  };
+}
+
 function render(){
+  const m = mode();
   const total = STOPS.length;
   const doneCount = completed.size;
   const pct = doneCount / total;
@@ -220,28 +367,30 @@ function render(){
 
   if(nextStop){
     progressText.innerHTML = doneCount === 0
-      ? "لم يتم استلام أي طالب بعد — توجّهي إلى المحطة الأولى."
-      : "تم استلام <b>" + doneCount + " من " + total + "</b> حتى الآن.";
+      ? m.noneYetText
+      : `<b>${m.progressVerb} ${doneCount} من ${total}</b> حتى الآن.`;
     currentSlot.innerHTML = `
       <div class="current-card">
-        <div class="label">المحطة التالية</div>
+        <div class="label">${m.nextLabel}</div>
         <div class="name">${nextStop.name}</div>
         <div class="meta">${nextStop.lat.toFixed(6)}, ${nextStop.lng.toFixed(6)}</div>
         <a class="navigate-btn" href="${navUrl(nextStop.lat, nextStop.lng)}" target="_blank" rel="noopener">↗ توجيه</a>
-        <button class="done-btn" id="mark-done-btn">تم الاستلام</button>
+        <button class="done-btn" id="mark-done-btn">${m.doneBtn}</button>
       </div>`;
     document.getElementById('mark-done-btn').onclick = () => {
       completed.add(nextStop.name);
       saveProgress();
+      const isLast = completed.size === STOPS.length;
+      showCopyBanner(isLast ? allDoneMessage() : messageFor(nextStop.name));
       render();
     };
   } else {
-    progressText.innerHTML = "<b>جميع المحطات الـ١٤</b> تم استلامها.";
+    progressText.innerHTML = `<b>جميع المحطات الـ${total}</b> — ${m.progressVerb === "تم استلام" ? "تم استلامها" : "تم توصيلها"}.`;
     currentSlot.innerHTML = `
       <div class="all-done">
-        <div class="name">الجميع في الحافلة 🌅</div>
-        <div class="meta">توجّهي إلى ${END.name} — ${END.lat.toFixed(6)}, ${END.lng.toFixed(6)}</div>
-        <a class="navigate-btn" style="background:var(--sage);border-color:var(--sage);margin-top:12px;color:#fff" href="${navUrl(END.lat, END.lng)}" target="_blank" rel="noopener">↗ التوجه إلى المدرسة</a>
+        <div class="name">${m.allDoneTitle}</div>
+        <div class="meta">${m.end.name} — ${m.end.lat.toFixed(6)}, ${m.end.lng.toFixed(6)}</div>
+        <a class="navigate-btn" style="background:var(--sage);border-color:var(--sage);margin-top:12px;color:#fff" href="${navUrl(m.end.lat, m.end.lng)}" target="_blank" rel="noopener">${m.endBtnLabel}</a>
       </div>`;
   }
 
@@ -261,13 +410,20 @@ function render(){
   list.querySelectorAll('li').forEach(li => {
     li.querySelector('.check').onclick = () => {
       const name = li.dataset.name;
-      if(completed.has(name)) completed.delete(name); else completed.add(name);
+      if(completed.has(name)){
+        completed.delete(name);
+      } else {
+        completed.add(name);
+        const isLast = completed.size === STOPS.length;
+        showCopyBanner(isLast ? allDoneMessage() : messageFor(name));
+      }
       saveProgress();
       render();
     };
   });
 
-  if(typeof map !== 'undefined') drawMarkers();
+  drawMarkers();
+  renderGoogleMapsLinks();
 }
 
 document.getElementById('reset-btn').onclick = () => {
@@ -293,33 +449,38 @@ function numberedDot(number, done){
 }
 
 let stopMarkers = [];
+let startMarker = null;
+let endMarker = null;
 function drawMarkers(){
-  stopMarkers.forEach(m => map.removeLayer(m));
+  stopMarkers.forEach(mk => map.removeLayer(mk));
   stopMarkers = STOPS.map((s, i) => L.marker([s.lat, s.lng], { icon: numberedDot(i + 1, completed.has(s.name)) }).addTo(map));
+  if(startMarker) map.removeLayer(startMarker);
+  if(endMarker) map.removeLayer(endMarker);
+  startMarker = L.marker([mode().start.lat, mode().start.lng], { icon: dot('#E3A857') }).addTo(map);
+  endMarker = L.marker([mode().end.lat, mode().end.lng], { icon: dot('#6FA287') }).addTo(map);
 }
 
-L.marker([START.lat, START.lng], { icon: dot('#E3A857') }).addTo(map);
-drawMarkers();
-L.marker([END.lat, END.lng], { icon: dot('#6FA287') }).addTo(map);
-
-const initialLatLngs = [START, ...STOPS, END].map(p => [p.lat, p.lng]);
-map.fitBounds(initialLatLngs, { padding:[18,18] });
-
-// خط متقطع مستقيم يظهر فورًا كمؤشر أولي فقط.
-let routeLine = L.polyline(initialLatLngs, { color:'#D8607E', weight:3, opacity:.5, dashArray:'1,7' }).addTo(map);
+let routeLine = null;
 
 // نستخدم خدمة "Trip" من OSRM، التي تحسب أفضل ترتيب لزيارة المحطات
 // اعتمادًا على شبكة الطرق الفعلية (وليس المسافة المستقيمة)، بدءًا من
-// نقطة الانطلاق وانتهاءً بالمدرسة — هذا ما يصحح المسار المتعرّج.
+// نقطة انطلاق الرحلة الحالية (ذهاب أو عودة) وانتهاءً بنقطة نهايتها.
 async function optimizeAndDrawRoute(){
-  const points = [START, ...RAW_STOPS, END];
+  const m = mode();
+  const points = [m.start, ...RAW_STOPS, m.end];
   const coordStr = points.map(p => p.lng + "," + p.lat).join(";");
   const url = `https://router.project-osrm.org/trip/v1/driving/${coordStr}?source=first&destination=last&roundtrip=false&overview=full&geometries=geojson`;
+
+  const initialLatLngs = points.map(p => [p.lat, p.lng]);
+  if(routeLine) map.removeLayer(routeLine);
+  routeLine = L.polyline(initialLatLngs, { color:'#D8607E', weight:3, opacity:.5, dashArray:'1,7' }).addTo(map);
+  map.fitBounds(initialLatLngs, { padding:[18,18] });
+  drawMarkers();
+
   try{
     const res = await fetch(url);
     const data = await res.json();
     if(data.code === "Ok" && data.trips && data.trips[0]){
-      // إعادة ترتيب المحطات (بدون الانطلاق والمدرسة) حسب ترتيب الزيارة الفعلي
       const stopWaypoints = data.waypoints.slice(1, 1 + RAW_STOPS.length);
       const orderedRaw = stopWaypoints
         .map((wp, originalIdx) => ({ ...RAW_STOPS[originalIdx], visitOrder: wp.waypoint_index }))
@@ -329,7 +490,6 @@ async function optimizeAndDrawRoute(){
       const roadLatLngs = data.trips[0].geometry.coordinates.map(c => [c[1], c[0]]);
       map.removeLayer(routeLine);
       routeLine = L.polyline(roadLatLngs, { color:'#D8607E', weight:4, opacity:.85 }).addTo(map);
-      drawMarkers();
       map.fitBounds(roadLatLngs, { padding:[18,18] });
 
       render();
@@ -338,9 +498,30 @@ async function optimizeAndDrawRoute(){
     console.warn("تعذّر الوصول لخدمة تحسين المسار، سيُستخدم الترتيب الاحتياطي.");
   }
 }
-optimizeAndDrawRoute();
+
+function switchMode(newModeKey){
+  if(newModeKey === currentModeKey) return;
+  currentModeKey = newModeKey;
+  document.getElementById('tab-morning').classList.toggle('active', newModeKey === 'morning');
+  document.getElementById('tab-afternoon').classList.toggle('active', newModeKey === 'afternoon');
+  document.getElementById('eyebrow').textContent = mode().eyebrow;
+  document.getElementById('page-title').textContent = mode().title;
+  document.getElementById('page-sub').textContent = mode().sub;
+  document.getElementById('page-footer').textContent = mode().footer;
+  document.getElementById('copy-banner').classList.remove('show');
+
+  STOPS = RAW_STOPS.map((s, i) => ({ ...s, name: "المحطة " + (i + 1) }));
+  loadProgress();
+  render();
+  optimizeAndDrawRoute();
+}
+
+document.getElementById('tab-morning').onclick = () => switchMode('morning');
+document.getElementById('tab-afternoon').onclick = () => switchMode('afternoon');
 
 loadProgress();
+render();
+optimizeAndDrawRoute();
 </script>
 </body>
 </html>
