@@ -8,6 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --bg: #FFF7F3;
@@ -101,6 +103,13 @@
     cursor:pointer; font-family:'Tajawal', sans-serif;
   }
   .absent-btn:active{ background: rgba(255,255,255,.24); }
+  .summary-btn{
+    width:100%; margin-top:10px; background: rgba(255,255,255,.55);
+    border:1px solid #CFE6D8; color:#3E6B54;
+    font-weight:800; font-size:14.5px; padding:11px; border-radius:11px;
+    cursor:pointer; font-family:'Tajawal', sans-serif;
+  }
+  .summary-btn:active{ background: rgba(255,255,255,.8); }
   .undo-link{
     display:block; text-align:center; margin-top:10px; background:none; border:none;
     color:var(--rose-deep); font-size:13px; font-weight:700; cursor:pointer;
@@ -164,11 +173,11 @@
   .stop-name{ font-weight:700; font-size:15px; }
   .absent-tag{ color:#9C7C88; font-size:11.5px; font-weight:700; }
   .stop-coord{ color:var(--muted); font-size:12px; margin-top:1px; direction:ltr; unicode-bidi:embed; text-align:right; }
-  .row-actions{ margin-inline-start:auto; display:flex; gap:6px; }
+  .row-actions{ margin-inline-start:auto; display:flex; gap:8px; }
   .check, .mark-absent{
-    width:26px; height:26px; border-radius:8px;
+    width:38px; height:38px; border-radius:10px;
     border:2px solid var(--line); flex-shrink:0; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; font-size:13px;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
   }
   li.done .check{ background:var(--sage); border-color:var(--sage); color:#fff; }
   li.absent .mark-absent{ background:#9C7C88; border-color:#9C7C88; color:#fff; }
@@ -198,8 +207,8 @@
   </header>
 
   <div class="mode-tabs">
-    <button class="mode-tab active" id="tab-morning" data-mode="morning">↦ الذهاب</button>
-    <button class="mode-tab" id="tab-afternoon" data-mode="afternoon">↤ العودة</button>
+    <button class="mode-tab active" id="tab-morning" data-mode="morning">الذهاب</button>
+    <button class="mode-tab" id="tab-afternoon" data-mode="afternoon">العودة</button>
   </div>
 
   <div class="progress-row">
@@ -234,24 +243,24 @@
 const HOME   = { name: "نقطة الانطلاق", lat: 23.469158, lng: 58.475975 };
 const SCHOOL = { name: "المدرسة", lat: 23.534421, lng: 58.456905 };
 
-// إحداثيات المنازل الخام، مع معرّف ثابت (id) ورقم مرجعي ثابت (label) لا يتغيّران
+// إحداثيات المنازل الخام، مع اسم الطالب واسم مرجعي ثابت (id) لا يتغيّر
 // أبدًا — حتى عند إعادة ترتيب المسار أو استبعاد أحد المنازل بسبب الغياب.
 const RAW_STOPS = [
-  { lat: 23.477276, lng: 58.474827 },
-  { lat: 23.479507, lng: 58.476406 },
-  { lat: 23.479063, lng: 58.472530 },
-  { lat: 23.481443, lng: 58.471748 },
-  { lat: 23.481047, lng: 58.469006 },
-  { lat: 23.483963, lng: 58.474094 },
-  { lat: 23.487284, lng: 58.470703 },
-  { lat: 23.489319, lng: 58.476501 },
-  { lat: 23.491389, lng: 58.477056 },
-  { lat: 23.491694, lng: 58.477667 },
-  { lat: 23.491472, lng: 58.477889 },
-  { lat: 23.492870, lng: 58.478542 },
-  { lat: 23.490744, lng: 58.481663 },
-  { lat: 23.492619, lng: 58.483624 },
-].map((s, i) => ({ ...s, id: "p" + i, label: "المنزل " + (i + 1) }));
+  { lat: 23.477276, lng: 58.474827, studentName: "مشعل" },
+  { lat: 23.479507, lng: 58.476406, studentName: "عبدالرحمن" },
+  { lat: 23.479063, lng: 58.472530, studentName: "ألين" },
+  { lat: 23.481443, lng: 58.471748, studentName: "فارس" },
+  { lat: 23.481047, lng: 58.469006, studentName: "خالد" },
+  { lat: 23.483963, lng: 58.474094, studentName: "امال" },
+  { lat: 23.487284, lng: 58.470703, studentName: "ديمة" },
+  { lat: 23.489319, lng: 58.476501, studentName: "طناف" },
+  { lat: 23.491389, lng: 58.477056, studentName: "جمان" },
+  { lat: 23.491694, lng: 58.477667, studentName: "ملاك" },
+  { lat: 23.491472, lng: 58.477889, studentName: "حور" },
+  { lat: 23.492870, lng: 58.478542, studentName: "ورد" },
+  { lat: 23.490744, lng: 58.481663, studentName: "علي" },
+  { lat: 23.492619, lng: 58.483624, studentName: "ريان" },
+].map((s, i) => ({ ...s, id: "p" + i }));
 
 const MODES = {
   morning: {
@@ -264,9 +273,9 @@ const MODES = {
     doneBtn: "تم الاستلام",
     noneYetText: "لم يتم استلام أي طالب بعد — توجّهي إلى أول منزل.",
     progressVerb: "تم استلام",
-    allDoneTitle: "الجميع في الحافلة 🌅",
-    endBtnLabel: "↗ التوجه إلى المدرسة",
-    msgVerb: "تم استلام طالب",
+    allDoneTitle: "الجميع في الحافلة",
+    endBtnLabel: "التوجه إلى المدرسة",
+    msgVerb: "تم استلام",
     allDoneMsg: n => `🌅 اكتمل استلام جميع الطلاب (${n}/${n}) — التوجه الآن إلى المدرسة`,
   },
   afternoon: {
@@ -279,9 +288,9 @@ const MODES = {
     doneBtn: "تم التوصيل",
     noneYetText: "لم يتم توصيل أي طالب بعد — انطلقي من المدرسة.",
     progressVerb: "تم توصيل",
-    allDoneTitle: "انتهت الرحلة 🏠",
-    endBtnLabel: "↗ التوجه إلى نقطة الانطلاق",
-    msgVerb: "تم توصيل طالب",
+    allDoneTitle: "انتهت الرحلة",
+    endBtnLabel: "التوجه إلى نقطة الانطلاق",
+    msgVerb: "تم توصيل",
     allDoneMsg: n => `🏠 تم توصيل جميع الطلاب (${n}/${n}) — انتهت الرحلة`,
   },
 };
@@ -291,13 +300,42 @@ let STOPS = [];              // المحطات النشطة فقط (غير ال�
 let status = new Map();      // id -> 'done' | 'absent'
 let actionHistory = [];      // مكدّس آخر الإجراءات (بمعرّفات id) للتراجع
 
+// الترتيب اليدوي الثابت للرحلة — لا يُعاد حسابه تلقائيًا، فقط يُستبعد منه
+// الطلاب الغائبون مع الحفاظ على نفس تسلسل البقية.
+const FIXED_ORDER = [
+  "عبدالرحمن", "مشعل", "ألين", "خالد", "فارس", "ديمة", "امال",
+  "طناف", "جمان", "ملاك", "حور", "ورد", "علي", "ريان",
+];
+const FIXED_STOPS = FIXED_ORDER.map(name => RAW_STOPS.find(s => s.studentName === name));
+
 function mode(){ return MODES[currentModeKey]; }
-function isAbsent(id){ return status.get(id) === 'absent'; }
-function activeRawStops(){ return RAW_STOPS.filter(s => !isAbsent(s.id)); }
+function statusValue(id){ const e = status.get(id); return e ? e.v : undefined; }
+function statusTime(id){ const e = status.get(id); return e ? e.t : null; }
+function isAbsent(id){ return statusValue(id) === 'absent'; }
+function activeFixedStops(){ return FIXED_STOPS.filter(s => !isAbsent(s.id)); }
 
 function todayKey(){
   return "route-progress:" + currentModeKey + ":" + new Date().toISOString().slice(0,10);
 }
+function tripStartKey(){
+  return "trip-start:" + currentModeKey + ":" + new Date().toISOString().slice(0,10);
+}
+let tripStartTime = null; // Date وقت أول إجراء اليوم في هذه الرحلة، لحساب مدة الرحلة في الملخص
+function loadTripStart(){
+  try{
+    const raw = localStorage.getItem(tripStartKey());
+    tripStartTime = raw ? new Date(raw) : null;
+  }catch(e){ tripStartTime = null; }
+}
+function markTripStartIfNeeded(){
+  if(tripStartTime) return;
+  tripStartTime = new Date();
+  try{ localStorage.setItem(tripStartKey(), tripStartTime.toISOString()); }catch(e){}
+}
+function clearTripStart(){
+  try{ localStorage.removeItem(tripStartKey()); }catch(e){}
+}
+
 function loadProgress(){
   status = new Map();
   actionHistory = [];
@@ -305,6 +343,7 @@ function loadProgress(){
     const raw = localStorage.getItem(todayKey());
     if(raw){ status = new Map(Object.entries(JSON.parse(raw))); }
   }catch(e){ /* لا يوجد تقدم محفوظ بعد، أو التخزين غير متاح */ }
+  loadTripStart();
 }
 function saveProgress(){
   try{
@@ -314,7 +353,8 @@ function saveProgress(){
   }
 }
 function setStatus(id, value){
-  status.set(id, value);
+  markTripStartIfNeeded();
+  status.set(id, { v: value, t: new Date().toISOString() });
   actionHistory.push(id);
   saveProgress();
 }
@@ -347,18 +387,194 @@ function renderGoogleMapsLinks(){
   const legs = buildLegs(points);
   const container = document.getElementById('gmaps-links');
   container.innerHTML = legs.map((leg, i) => {
-    const label = legs.length > 1 ? `↗ خرائط Google — الجزء ${i + 1}` : "↗ فتح المسار كاملًا في خرائط Google";
+    const label = legs.length > 1 ? `خرائط Google — الجزء ${i + 1}` : "فتح المسار كاملًا في خرائط Google";
     return `<a class="gmaps-btn" href="${legUrl(leg)}" target="_blank" rel="noopener">${label}</a>`;
   }).join('');
 }
 
-function messageFor(stopName){
+function formatDuration(seconds){
+  const mins = Math.round(seconds / 60);
+  if(mins <= 0) return "أقل من دقيقة";
+  if(mins === 1) return "دقيقة واحدة";
+  if(mins === 2) return "دقيقتين";
+  if(mins <= 10) return `${mins} دقائق`;
+  return `${mins} دقيقة`;
+}
+// مجموع مدد الأرجل (legs) بين محطتين في المسار الحالي، باستخدام بيانات
+// المدة الفعلية القادمة من OSRM. يعيد null إن لم تتوفر البيانات بعد.
+function travelSeconds(fromIdx, toIdx){
+  if(!ROUTE_LEGS) return null;
+  let total = 0;
+  for(let k = fromIdx + 1; k <= toIdx; k++){
+    if(ROUTE_LEGS[k] === undefined) return null;
+    total += ROUTE_LEGS[k];
+  }
+  return total;
+}
+
+function messageFor(doneStop){
   const time = new Date().toLocaleTimeString('ar-OM', { hour:'2-digit', minute:'2-digit' });
-  return `✅ ${mode().msgVerb} — ${stopName} — الساعة ${time}`;
+  let msg = `✅ ${mode().msgVerb} ${doneStop.name} — الساعة ${time}`;
+
+  const doneIdx = STOPS.findIndex(s => s.id === doneStop.id);
+  const nextPending = STOPS.slice(doneIdx + 1).find(s => statusValue(s.id) !== 'done');
+  if(nextPending){
+    const nextIdx = STOPS.findIndex(s => s.id === nextPending.id);
+    const secs = travelSeconds(doneIdx, nextIdx);
+    msg += secs !== null
+      ? `\n🚌 التالي: ${nextPending.name} — خلال ${formatDuration(secs)} تقريبًا`
+      : `\n🚌 التالي: ${nextPending.name}`;
+  }
+  return msg;
 }
 function allDoneMessage(){
   const time = new Date().toLocaleTimeString('ar-OM', { hour:'2-digit', minute:'2-digit' });
   return mode().allDoneMsg(STOPS.length) + ` — الساعة ${time}`;
+}
+function daySummaryMessage(){
+  const time = new Date().toLocaleTimeString('ar-OM', { hour:'2-digit', minute:'2-digit' });
+  const doneNames = STOPS.filter(s => statusValue(s.id) === 'done').map(s => s.name);
+  const absentNames = RAW_STOPS.filter(s => isAbsent(s.id)).map(s => s.studentName);
+
+  let msg = `📋 ملخص ${mode().title} — الساعة ${time}\n${mode().progressVerb}: ${doneNames.length} طالب`;
+  if(absentNames.length){
+    msg += `\n🚫 غياب (${absentNames.length}): ${absentNames.join('، ')}`;
+  }
+  if(tripStartTime){
+    const elapsedSecs = Math.round((Date.now() - tripStartTime.getTime()) / 1000);
+    msg += `\n⏱️ مدة الرحلة: ${formatDuration(elapsedSecs)}`;
+  }
+  return msg;
+}
+
+// نرسم مخططًا تخطيطيًا (وليس صورة خرائط حقيقية) لأن التقاط بلاطات
+// OpenStreetMap داخل الصفحة عبر html2canvas غير موثوق بسبب قيود CORS
+// في المتصفح — غالبًا ما تظهر فارغة. هذا المخطط مبني بالكامل من
+// إحداثياتنا نفسها، فهو يعمل دائمًا بلا اعتماد على شبكة خارجية.
+function buildDayPdfContent(){
+  const m = mode();
+  const absentPts = RAW_STOPS.filter(s => isAbsent(s.id));
+  const boundsPts = [m.start, ...STOPS, m.end, ...absentPts];
+  const lats = boundsPts.map(p => p.lat), lngs = boundsPts.map(p => p.lng);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const W = 600, H = 360, PAD = 34;
+  const toXY = p => [
+    PAD + ((p.lng - minLng) / ((maxLng - minLng) || 1)) * (W - 2*PAD),
+    PAD + ((maxLat - p.lat) / ((maxLat - minLat) || 1)) * (H - 2*PAD),
+  ];
+
+  const routePts = [m.start, ...STOPS, m.end].map(toXY);
+  const routeLine = routePts.map(([x,y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+
+  const [sx, sy] = toXY(m.start);
+  const [ex, ey] = toXY(m.end);
+  let markers = `
+    <circle cx="${sx}" cy="${sy}" r="9" fill="#E3A857" stroke="#fff" stroke-width="2.5"/>
+    <circle cx="${ex}" cy="${ey}" r="9" fill="#6FA287" stroke="#fff" stroke-width="2.5"/>`;
+
+  STOPS.forEach((s, i) => {
+    const [x, y] = toXY(s);
+    const fill = statusValue(s.id) === 'done' ? '#6FA287' : '#D8607E';
+    markers += `
+      <circle cx="${x}" cy="${y}" r="12" fill="${fill}" stroke="#fff" stroke-width="2.5"/>
+      <text x="${x}" y="${y+4}" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">${i+1}</text>`;
+  });
+  absentPts.forEach(s => {
+    const [x, y] = toXY(s);
+    markers += `
+      <circle cx="${x}" cy="${y}" r="8" fill="#C9BEC3" stroke="#fff" stroke-width="2"/>
+      <text x="${x}" y="${y+3}" font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle">×</text>`;
+  });
+
+  const svg = `
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="240" style="display:block;background:#FFF7F3;border-radius:12px;border:1px solid #F1DFE1;">
+      <polyline points="${routeLine}" fill="none" stroke="#D8607E" stroke-width="3" stroke-dasharray="1,7" opacity="0.65"/>
+      ${markers}
+    </svg>`;
+
+  const timeFmt = iso => iso ? new Date(iso).toLocaleTimeString('ar-OM', { hour:'2-digit', minute:'2-digit' }) : '—';
+  const rows = STOPS.map((s, i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 2px;border-bottom:1px solid #F1DFE1;">
+      <span style="font-weight:700;">${i+1}. ${s.name}</span>
+      <span style="color:#9C7C88;direction:ltr;">${timeFmt(statusTime(s.id))}</span>
+    </div>`).join('');
+
+  const absentBlock = absentPts.length ? `
+    <div style="margin-top:16px;font-weight:700;color:#9C7C88;font-size:13px;">غياب اليوم (${absentPts.length})</div>
+    ${absentPts.map(s => `<div style="padding:6px 2px;color:#9C7C88;">✕ ${s.studentName}</div>`).join('')}` : '';
+
+  const dateStr = new Date().toLocaleDateString('ar-OM', { year:'numeric', month:'long', day:'numeric' });
+
+  return `
+    <div dir="rtl" style="width:560px;padding:26px;background:#fff;font-family:'Tajawal',sans-serif;color:#3A2432;">
+      <div style="font-size:13px;color:#B8425F;font-weight:700;">رحلة آمنة</div>
+      <div style="font-family:'Markazi Text',serif;font-size:28px;font-weight:700;margin:4px 0 2px;">${m.title} — ملخص اليوم</div>
+      <div style="color:#9C7C88;font-size:13px;margin-bottom:16px;">${dateStr}</div>
+      ${svg}
+      <div style="margin-top:18px;">${rows}</div>
+      ${absentBlock}
+    </div>`;
+}
+
+async function generateDayPdf(){
+  const btn = document.getElementById('pdf-btn');
+  if(btn){ btn.disabled = true; btn.textContent = "جارٍ التجهيز..."; }
+
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+  container.innerHTML = buildDayPdfContent();
+  document.body.appendChild(container);
+
+  try{
+    await document.fonts.ready; // نضمن تحميل خطوط تجوال/مرقزي قبل الالتقاط
+    // نلتقط المحتوى كصورة فقط (بلا طبقة نص) — استخدام jsPDF's .html() مباشرة
+    // كان يحاول أيضًا إضافة نص حقيقي بخط lsPDF الافتراضي، وهذا الخط لا يدعم
+    // الحروف العربية إطلاقًا فتظهر رموزًا مشوّهة. الصورة تتجنّب هذه المشكلة كليًا.
+    const canvas = await html2canvas(container.firstElementChild, { scale: 2, backgroundColor: '#ffffff' });
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit:'pt', format:'a4' });
+    const margin = 20;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const usableWidth = pageWidth - margin*2;
+    const usableHeight = pageHeight - margin*2;
+    const scaleRatio = usableWidth / canvas.width;
+    const totalHeightPt = canvas.height * scaleRatio;
+
+    if(totalHeightPt <= usableHeight){
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, usableWidth, totalHeightPt);
+    } else {
+      // المحتوى أطول من صفحة واحدة — نقصّه إلى شرائح ونوزّعها على عدة صفحات
+      const sliceHeightPx = Math.floor(usableHeight / scaleRatio);
+      let renderedPx = 0;
+      let first = true;
+      while(renderedPx < canvas.height){
+        const thisSliceHeight = Math.min(sliceHeightPx, canvas.height - renderedPx);
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = thisSliceHeight;
+        sliceCanvas.getContext('2d').drawImage(
+          canvas, 0, renderedPx, canvas.width, thisSliceHeight, 0, 0, canvas.width, thisSliceHeight
+        );
+        if(!first) pdf.addPage();
+        pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, usableWidth, thisSliceHeight * scaleRatio);
+        renderedPx += thisSliceHeight;
+        first = false;
+      }
+    }
+
+    pdf.save(`ملخص-${mode().title}-${new Date().toISOString().slice(0,10)}.pdf`);
+  }catch(e){
+    console.warn("تعذّر إنشاء ملف PDF", e);
+    alert("تعذّر إنشاء ملف PDF هذه المرة. يمكنك استخدام زر نسخ الملخص كنص بدلاً من ذلك.");
+  }finally{
+    document.body.removeChild(container);
+    if(btn){ btn.disabled = false; btn.textContent = "تنزيل PDF"; }
+  }
 }
 
 function showCopyBanner(message){
@@ -379,7 +595,7 @@ function showCopyBanner(message){
       try{ document.execCommand('copy'); }catch(e2){}
       document.body.removeChild(ta);
     }
-    btn.textContent = "تم النسخ ✓";
+    btn.textContent = "تم النسخ";
     setTimeout(() => { if(document.getElementById('copy-btn')) btn.textContent = "نسخ الرسالة"; }, 2000);
   };
 }
@@ -389,17 +605,17 @@ function showCopyBanner(message){
 function undoLast(){
   const id = actionHistory.pop();
   if(id === undefined) return;
-  const wasAbsent = status.get(id) === 'absent';
+  const wasAbsent = statusValue(id) === 'absent';
   status.delete(id);
   saveProgress();
-  if(wasAbsent){ optimizeAndDrawRoute(); } else { render(); }
+  if(wasAbsent){ optimizeAndDrawRoute(false); } else { render(); }
 }
 
 function render(){
   const m = mode();
   const total = RAW_STOPS.length;
   const absentCount = RAW_STOPS.filter(s => isAbsent(s.id)).length;
-  const doneCount = STOPS.filter(s => status.get(s.id) === 'done').length;
+  const doneCount = STOPS.filter(s => statusValue(s.id) === 'done').length;
   const handledCount = doneCount + absentCount;
   const pct = handledCount / total;
   const circumference = 2 * Math.PI * 24;
@@ -409,11 +625,11 @@ function render(){
   document.getElementById('route-section-title').textContent =
     absentCount > 0 ? `ترتيب الرحلة الحالي (${STOPS.length} من ${total})` : "ترتيب الرحلة الحالي";
 
-  const nextStop = STOPS.find(s => status.get(s.id) !== 'done');
+  const nextStop = STOPS.find(s => statusValue(s.id) !== 'done');
   const progressText = document.getElementById('progress-text');
   const currentSlot = document.getElementById('current-slot');
   const undoBtn = actionHistory.length
-    ? `<button class="undo-link" id="undo-btn">↺ تراجع عن آخر إجراء</button>` : '';
+    ? `<button class="undo-link" id="undo-btn">تراجع عن آخر إجراء</button>` : '';
 
   if(nextStop){
     progressText.innerHTML = handledCount === 0
@@ -424,21 +640,21 @@ function render(){
         <div class="label">${m.nextLabel}</div>
         <div class="name">${nextStop.name}</div>
         <div class="meta">${nextStop.lat.toFixed(6)}, ${nextStop.lng.toFixed(6)}</div>
-        <a class="navigate-btn" href="${navUrl(nextStop.lat, nextStop.lng)}" target="_blank" rel="noopener">↗ توجيه</a>
+        <a class="navigate-btn" href="${navUrl(nextStop.lat, nextStop.lng)}" target="_blank" rel="noopener">توجيه</a>
         <button class="done-btn" id="mark-done-btn">${m.doneBtn}</button>
         <button class="absent-btn" id="mark-absent-btn">الطالب غائب اليوم</button>
         ${undoBtn}
       </div>`;
     document.getElementById('mark-done-btn').onclick = () => {
       setStatus(nextStop.id, 'done');
-      const isLast = STOPS.every(s => status.get(s.id) === 'done');
-      showCopyBanner(isLast ? allDoneMessage() : messageFor(nextStop.name));
+      const isLast = STOPS.every(s => statusValue(s.id) === 'done');
+      showCopyBanner(isLast ? allDoneMessage() : messageFor(nextStop));
       render();
     };
     document.getElementById('mark-absent-btn').onclick = () => {
       setStatus(nextStop.id, 'absent');
       document.getElementById('copy-banner').classList.remove('show');
-      optimizeAndDrawRoute(); // المحطات النشطة تغيّرت — أعِد حساب أفضل مسار
+      optimizeAndDrawRoute(false); // المحطات النشطة تغيّرت — أعِد حساب أفضل مسار، دون تغيير تكبير الخريطة
     };
   } else if(STOPS.length === 0){
     currentSlot.innerHTML = `
@@ -454,8 +670,12 @@ function render(){
         <div class="name">${m.allDoneTitle}</div>
         <div class="meta">${m.end.name} — ${m.end.lat.toFixed(6)}, ${m.end.lng.toFixed(6)}</div>
         <a class="navigate-btn" style="background:var(--sage);border-color:var(--sage);margin-top:12px;color:#fff" href="${navUrl(m.end.lat, m.end.lng)}" target="_blank" rel="noopener">${m.endBtnLabel}</a>
+        <button class="summary-btn" id="summary-btn">نسخ ملخص اليوم</button>
+        <button class="summary-btn" id="pdf-btn" style="margin-top:8px;">تنزيل PDF</button>
         ${undoBtn}
       </div>`;
+    document.getElementById('summary-btn').onclick = () => showCopyBanner(daySummaryMessage());
+    document.getElementById('pdf-btn').onclick = () => generateDayPdf();
   }
   if(document.getElementById('undo-btn')){
     document.getElementById('undo-btn').onclick = undoLast;
@@ -463,7 +683,7 @@ function render(){
 
   const list = document.getElementById('stops-list');
   list.innerHTML = STOPS.map((s, i) => {
-    const done = status.get(s.id) === 'done';
+    const done = statusValue(s.id) === 'done';
     return `<li class="${done ? 'done' : ''}" data-id="${s.id}">
       <div class="idx">${i+1}</div>
       <div>
@@ -481,19 +701,19 @@ function render(){
     const id = li.dataset.id;
     li.querySelector('.check').onclick = () => {
       const stop = STOPS.find(s => s.id === id);
-      if(status.get(id) === 'done'){
+      if(statusValue(id) === 'done'){
         status.delete(id); saveProgress();
       } else {
         setStatus(id, 'done');
-        const isLast = STOPS.every(s => status.get(s.id) === 'done');
-        showCopyBanner(isLast ? allDoneMessage() : messageFor(stop.name));
+        const isLast = STOPS.every(s => statusValue(s.id) === 'done');
+        showCopyBanner(isLast ? allDoneMessage() : messageFor(stop));
       }
       render();
     };
     li.querySelector('.mark-absent').onclick = () => {
       setStatus(id, 'absent');
       document.getElementById('copy-banner').classList.remove('show');
-      optimizeAndDrawRoute(); // المحطات النشطة تغيّرت — أعِد حساب أفضل مسار
+      optimizeAndDrawRoute(false); // المحطات النشطة تغيّرت — أعِد حساب أفضل مسار، دون تغيير تكبير الخريطة
     };
   });
 
@@ -509,7 +729,7 @@ function render(){
           <li class="absent" data-id="${s.id}">
             <div class="idx">✕</div>
             <div>
-              <div class="stop-name">${s.label} <span class="absent-tag">· غائب</span></div>
+              <div class="stop-name">${s.studentName} <span class="absent-tag">· غائب</span></div>
               <div class="stop-coord">${s.lat.toFixed(6)}, ${s.lng.toFixed(6)}</div>
             </div>
             <button class="undo-absent-btn" data-undo-id="${s.id}">إلغاء الغياب</button>
@@ -519,7 +739,7 @@ function render(){
       btn.onclick = () => {
         status.delete(btn.dataset.undoId);
         saveProgress();
-        optimizeAndDrawRoute(); // عاد منزل نشط إلى المسار — أعِد حساب أفضل ترتيب
+        optimizeAndDrawRoute(false); // عاد منزل نشط إلى المسار — أعِد حساب أفضل ترتيب، دون تغيير تكبير الخريطة
       };
     });
   }
@@ -529,10 +749,16 @@ function render(){
 }
 
 document.getElementById('reset-btn').onclick = () => {
+  if(actionHistory.length === 0 && status.size === 0) return; // لا شيء لإعادة تعيينه
+  const ok = confirm("هل أنت متأكدة من إعادة تعيين تقدّم هذه الرحلة؟ سيتم مسح كل ما تم تسجيله اليوم (استلام/توصيل وغياب).");
+  if(!ok) return;
   status = new Map();
   actionHistory = [];
+  tripStartTime = null;
+  clearTripStart();
   saveProgress();
-  optimizeAndDrawRoute();
+  document.getElementById('copy-banner').classList.remove('show');
+  optimizeAndDrawRoute(false);
 };
 
 // الخريطة
@@ -556,7 +782,7 @@ let startMarker = null;
 let endMarker = null;
 function drawMarkers(){
   stopMarkers.forEach(mk => map.removeLayer(mk));
-  stopMarkers = STOPS.map((s, i) => L.marker([s.lat, s.lng], { icon: numberedDot(i + 1, status.get(s.id) === 'done') }).addTo(map));
+  stopMarkers = STOPS.map((s, i) => L.marker([s.lat, s.lng], { icon: numberedDot(i + 1, statusValue(s.id) === 'done') }).addTo(map));
   if(startMarker) map.removeLayer(startMarker);
   if(endMarker) map.removeLayer(endMarker);
   startMarker = L.marker([mode().start.lat, mode().start.lng], { icon: dot('#E3A857') }).addTo(map);
@@ -564,66 +790,99 @@ function drawMarkers(){
 }
 
 let routeLine = null;
+let ROUTE_LEGS = null; // مدد الأرجل بين كل نقطتين متتاليتين في المسار الحالي (بالثواني)، من OSRM
 
-// نستخدم خدمة "Trip" من OSRM لحساب أفضل ترتيب لزيارة المحطات النشطة فقط
-// (باستبعاد أي منزل مسجَّل غائبًا)، اعتمادًا على شبكة الطرق الفعلية.
-// تُستدعى هذه الدالة من جديد كلما تغيّرت قائمة الغياب حتى يتكيّف المسار.
-async function optimizeAndDrawRoute(){
+// الترتيب ثابت يدويًا (FIXED_ORDER) ولا يُعاد حسابه — يُستبعد منه الغائبون
+// فقط. نستخدم خدمة "Route" من OSRM (وليس "Trip") لرسم المسار الفعلي على
+// الطرق بهذا الترتيب تحديدًا، دون اقتراح ترتيب مختلف.
+async function optimizeAndDrawRoute(fit = true){
   const m = mode();
-  const active = activeRawStops();
+  const active = activeFixedStops();
 
   if(active.length === 0){
     STOPS = [];
+    ROUTE_LEGS = null;
     if(routeLine) map.removeLayer(routeLine);
     routeLine = L.polyline([[m.start.lat, m.start.lng], [m.end.lat, m.end.lng]], { color:'#D8607E', weight:3, opacity:.5, dashArray:'1,7' }).addTo(map);
-    map.fitBounds([[m.start.lat, m.start.lng], [m.end.lat, m.end.lng]], { padding:[18,18] });
+    if(fit) map.fitBounds([[m.start.lat, m.start.lng], [m.end.lat, m.end.lng]], { padding:[18,18] });
     render();
     return;
   }
 
+  // الترتيب معروف فورًا (ثابت)، فلا داعي لانتظار الشبكة لعرض القائمة
+  STOPS = active.map(s => ({ ...s, name: s.studentName }));
+  ROUTE_LEGS = null; // ستُحدَّث بعد استجابة الشبكة أدناه
+  render();
+
   const points = [m.start, ...active, m.end];
   const coordStr = points.map(p => p.lng + "," + p.lat).join(";");
-  const url = `https://router.project-osrm.org/trip/v1/driving/${coordStr}?source=first&destination=last&roundtrip=false&overview=full&geometries=geojson`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`;
+  const activeIdsKey = active.map(s => s.id).join(",");
+  const cacheKey = "route-cache:" + currentModeKey;
 
-  // ترتيب احتياطي فوري (بانتظار استجابة خدمة التوجيه)
-  STOPS = active.map((s, i) => ({ ...s, name: "المحطة " + (i + 1) }));
-  const fallbackLatLngs = points.map(p => [p.lat, p.lng]);
-  if(routeLine) map.removeLayer(routeLine);
-  routeLine = L.polyline(fallbackLatLngs, { color:'#D8607E', weight:3, opacity:.5, dashArray:'1,7' }).addTo(map);
-  map.fitBounds(fallbackLatLngs, { padding:[18,18] });
+  // في انتظار الشبكة: استخدمي آخر مسار محفوظ لنفس مجموعة المحطات إن وُجد،
+  // بدلًا من خط مستقيم، كي لا يبدو التطبيق معطّلًا عند ضعف الاتصال.
+  let usedCache = false;
+  try{
+    const cachedRaw = localStorage.getItem(cacheKey);
+    if(cachedRaw){
+      const cached = JSON.parse(cachedRaw);
+      if(cached.activeIdsKey === activeIdsKey){
+        if(routeLine) map.removeLayer(routeLine);
+        routeLine = L.polyline(cached.roadLatLngs, { color:'#D8607E', weight:4, opacity:.85 }).addTo(map);
+        if(fit) map.fitBounds(cached.roadLatLngs, { padding:[18,18] });
+        ROUTE_LEGS = cached.legs || null;
+        usedCache = true;
+      }
+    }
+  }catch(e){ /* لا يوجد مسار محفوظ صالح */ }
+
+  if(!usedCache){
+    const fallbackLatLngs = points.map(p => [p.lat, p.lng]);
+    if(routeLine) map.removeLayer(routeLine);
+    routeLine = L.polyline(fallbackLatLngs, { color:'#D8607E', weight:3, opacity:.5, dashArray:'1,7' }).addTo(map);
+    if(fit) map.fitBounds(fallbackLatLngs, { padding:[18,18] });
+  }
   render();
 
   try{
     const res = await fetch(url);
     const data = await res.json();
-    if(data.code === "Ok" && data.trips && data.trips[0]){
-      const stopWaypoints = data.waypoints.slice(1, 1 + active.length);
-      const orderedActive = stopWaypoints
-        .map((wp, originalIdx) => ({ ...active[originalIdx], visitOrder: wp.waypoint_index }))
-        .sort((a, b) => a.visitOrder - b.visitOrder);
-      STOPS = orderedActive.map((s, i) => ({ id: s.id, lat: s.lat, lng: s.lng, name: "المحطة " + (i + 1) }));
-
-      const roadLatLngs = data.trips[0].geometry.coordinates.map(c => [c[1], c[0]]);
+    if(data.code === "Ok" && data.routes && data.routes[0]){
+      const roadLatLngs = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
       map.removeLayer(routeLine);
       routeLine = L.polyline(roadLatLngs, { color:'#D8607E', weight:4, opacity:.85 }).addTo(map);
-      map.fitBounds(roadLatLngs, { padding:[18,18] });
+      if(fit) map.fitBounds(roadLatLngs, { padding:[18,18] });
 
-      render();
+      // مدة كل رجل بين نقطتين متتاليتين، لاستخدامها في رسائل "التالي خلال..."
+      const legs = data.routes[0].legs ? data.routes[0].legs.map(l => l.duration) : null;
+      ROUTE_LEGS = legs;
+      render(); // لتحديث أي رسالة قيد العرض إن توفّرت المدة الآن
+
+      try{
+        localStorage.setItem(cacheKey, JSON.stringify({ activeIdsKey, roadLatLngs, legs }));
+      }catch(e){ /* تعذّر الحفظ — لا يؤثر على عمل التطبيق الآن */ }
     }
   }catch(e){
-    console.warn("تعذّر الوصول لخدمة تحسين المسار، سيُستخدم الترتيب الاحتياطي.");
+    console.warn(usedCache
+      ? "تعذّر تحديث المسار، ما زال يُعرض آخر مسار محفوظ."
+      : "تعذّر الوصول لخدمة رسم المسار، سيظهر خط مستقيم بدلًا من مسار الطرق.");
   }
+}
+
+function applyModeUI(){
+  document.getElementById('tab-morning').classList.toggle('active', currentModeKey === 'morning');
+  document.getElementById('tab-afternoon').classList.toggle('active', currentModeKey === 'afternoon');
+  document.getElementById('eyebrow').textContent = mode().eyebrow;
+  document.getElementById('page-title').textContent = mode().title;
+  document.getElementById('page-sub').textContent = mode().sub;
+  document.getElementById('page-footer').textContent = mode().footer;
 }
 
 function switchMode(newModeKey){
   if(newModeKey === currentModeKey) return;
   currentModeKey = newModeKey;
-  document.getElementById('tab-morning').classList.toggle('active', newModeKey === 'morning');
-  document.getElementById('tab-afternoon').classList.toggle('active', newModeKey === 'afternoon');
-  document.getElementById('eyebrow').textContent = mode().eyebrow;
-  document.getElementById('page-title').textContent = mode().title;
-  document.getElementById('page-sub').textContent = mode().sub;
-  document.getElementById('page-footer').textContent = mode().footer;
+  applyModeUI();
   document.getElementById('copy-banner').classList.remove('show');
 
   loadProgress();
@@ -632,6 +891,13 @@ function switchMode(newModeKey){
 
 document.getElementById('tab-morning').onclick = () => switchMode('morning');
 document.getElementById('tab-afternoon').onclick = () => switchMode('afternoon');
+
+// عند فتح الصفحة لأول مرة، تُختار رحلة الذهاب أو العودة تلقائيًا حسب
+// الوقت الحالي — قبل الساعة ١٢ ظهرًا نفترض الذهاب، وبعدها العودة.
+// هذا افتراضي فقط، ويمكن تغييره يدويًا من التبويبين في أي وقت.
+const currentHour = new Date().getHours();
+currentModeKey = currentHour < 12 ? 'morning' : 'afternoon';
+applyModeUI();
 
 loadProgress();
 optimizeAndDrawRoute();
