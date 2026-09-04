@@ -392,7 +392,7 @@ function undoLast(){
   const wasAbsent = status.get(id) === 'absent';
   status.delete(id);
   saveProgress();
-  if(wasAbsent){ optimizeAndDrawRoute(); } else { render(); }
+  if(wasAbsent){ optimizeAndDrawRoute(false); } else { render(); }
 }
 
 function render(){
@@ -438,7 +438,7 @@ function render(){
     document.getElementById('mark-absent-btn').onclick = () => {
       setStatus(nextStop.id, 'absent');
       document.getElementById('copy-banner').classList.remove('show');
-      optimizeAndDrawRoute(); // المحطات النشطة تغيّرت — أعِد حساب أفضل مسار
+      optimizeAndDrawRoute(false); // المحطات النشطة تغيّرت — أعِد حساب أفضل مسار، دون تغيير تكبير الخريطة
     };
   } else if(STOPS.length === 0){
     currentSlot.innerHTML = `
@@ -493,7 +493,7 @@ function render(){
     li.querySelector('.mark-absent').onclick = () => {
       setStatus(id, 'absent');
       document.getElementById('copy-banner').classList.remove('show');
-      optimizeAndDrawRoute(); // المحطات النشطة تغيّرت — أعِد حساب أفضل مسار
+      optimizeAndDrawRoute(false); // المحطات النشطة تغيّرت — أعِد حساب أفضل مسار، دون تغيير تكبير الخريطة
     };
   });
 
@@ -519,7 +519,7 @@ function render(){
       btn.onclick = () => {
         status.delete(btn.dataset.undoId);
         saveProgress();
-        optimizeAndDrawRoute(); // عاد منزل نشط إلى المسار — أعِد حساب أفضل ترتيب
+        optimizeAndDrawRoute(false); // عاد منزل نشط إلى المسار — أعِد حساب أفضل ترتيب، دون تغيير تكبير الخريطة
       };
     });
   }
@@ -532,7 +532,7 @@ document.getElementById('reset-btn').onclick = () => {
   status = new Map();
   actionHistory = [];
   saveProgress();
-  optimizeAndDrawRoute();
+  optimizeAndDrawRoute(false);
 };
 
 // الخريطة
@@ -568,7 +568,7 @@ let routeLine = null;
 // نستخدم خدمة "Trip" من OSRM لحساب أفضل ترتيب لزيارة المحطات النشطة فقط
 // (باستبعاد أي منزل مسجَّل غائبًا)، اعتمادًا على شبكة الطرق الفعلية.
 // تُستدعى هذه الدالة من جديد كلما تغيّرت قائمة الغياب حتى يتكيّف المسار.
-async function optimizeAndDrawRoute(){
+async function optimizeAndDrawRoute(fit = true){
   const m = mode();
   const active = activeRawStops();
 
@@ -576,7 +576,7 @@ async function optimizeAndDrawRoute(){
     STOPS = [];
     if(routeLine) map.removeLayer(routeLine);
     routeLine = L.polyline([[m.start.lat, m.start.lng], [m.end.lat, m.end.lng]], { color:'#D8607E', weight:3, opacity:.5, dashArray:'1,7' }).addTo(map);
-    map.fitBounds([[m.start.lat, m.start.lng], [m.end.lat, m.end.lng]], { padding:[18,18] });
+    if(fit) map.fitBounds([[m.start.lat, m.start.lng], [m.end.lat, m.end.lng]], { padding:[18,18] });
     render();
     return;
   }
@@ -590,7 +590,7 @@ async function optimizeAndDrawRoute(){
   const fallbackLatLngs = points.map(p => [p.lat, p.lng]);
   if(routeLine) map.removeLayer(routeLine);
   routeLine = L.polyline(fallbackLatLngs, { color:'#D8607E', weight:3, opacity:.5, dashArray:'1,7' }).addTo(map);
-  map.fitBounds(fallbackLatLngs, { padding:[18,18] });
+  if(fit) map.fitBounds(fallbackLatLngs, { padding:[18,18] });
   render();
 
   try{
@@ -606,7 +606,7 @@ async function optimizeAndDrawRoute(){
       const roadLatLngs = data.trips[0].geometry.coordinates.map(c => [c[1], c[0]]);
       map.removeLayer(routeLine);
       routeLine = L.polyline(roadLatLngs, { color:'#D8607E', weight:4, opacity:.85 }).addTo(map);
-      map.fitBounds(roadLatLngs, { padding:[18,18] });
+      if(fit) map.fitBounds(roadLatLngs, { padding:[18,18] });
 
       render();
     }
