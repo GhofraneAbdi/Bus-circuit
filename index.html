@@ -234,24 +234,24 @@
 const HOME   = { name: "نقطة الانطلاق", lat: 23.469158, lng: 58.475975 };
 const SCHOOL = { name: "المدرسة", lat: 23.534421, lng: 58.456905 };
 
-// إحداثيات المنازل الخام، مع معرّف ثابت (id) ورقم مرجعي ثابت (label) لا يتغيّران
+// إحداثيات المنازل الخام، مع اسم الطالب واسم مرجعي ثابت (id) لا يتغيّر
 // أبدًا — حتى عند إعادة ترتيب المسار أو استبعاد أحد المنازل بسبب الغياب.
 const RAW_STOPS = [
-  { lat: 23.477276, lng: 58.474827 },
-  { lat: 23.479507, lng: 58.476406 },
-  { lat: 23.479063, lng: 58.472530 },
-  { lat: 23.481443, lng: 58.471748 },
-  { lat: 23.481047, lng: 58.469006 },
-  { lat: 23.483963, lng: 58.474094 },
-  { lat: 23.487284, lng: 58.470703 },
-  { lat: 23.489319, lng: 58.476501 },
-  { lat: 23.491389, lng: 58.477056 },
-  { lat: 23.491694, lng: 58.477667 },
-  { lat: 23.491472, lng: 58.477889 },
-  { lat: 23.492870, lng: 58.478542 },
-  { lat: 23.490744, lng: 58.481663 },
-  { lat: 23.492619, lng: 58.483624 },
-].map((s, i) => ({ ...s, id: "p" + i, label: "المنزل " + (i + 1) }));
+  { lat: 23.477276, lng: 58.474827, studentName: "مشعل" },
+  { lat: 23.479507, lng: 58.476406, studentName: "عبدالرحمن" },
+  { lat: 23.479063, lng: 58.472530, studentName: "ألين" },
+  { lat: 23.481443, lng: 58.471748, studentName: "فارس" },
+  { lat: 23.481047, lng: 58.469006, studentName: "خالد" },
+  { lat: 23.483963, lng: 58.474094, studentName: "امال" },
+  { lat: 23.487284, lng: 58.470703, studentName: "ديمة" },
+  { lat: 23.489319, lng: 58.476501, studentName: "طناف" },
+  { lat: 23.491389, lng: 58.477056, studentName: "جمان" },
+  { lat: 23.491694, lng: 58.477667, studentName: "ملاك" },
+  { lat: 23.491472, lng: 58.477889, studentName: "حور" },
+  { lat: 23.492870, lng: 58.478542, studentName: "ورد" },
+  { lat: 23.490744, lng: 58.481663, studentName: "علي" },
+  { lat: 23.492619, lng: 58.483624, studentName: "ريان" },
+].map((s, i) => ({ ...s, id: "p" + i }));
 
 const MODES = {
   morning: {
@@ -266,7 +266,7 @@ const MODES = {
     progressVerb: "تم استلام",
     allDoneTitle: "الجميع في الحافلة 🌅",
     endBtnLabel: "↗ التوجه إلى المدرسة",
-    msgVerb: "تم استلام طالب",
+    msgVerb: "تم استلام الطالب",
     allDoneMsg: n => `🌅 اكتمل استلام جميع الطلاب (${n}/${n}) — التوجه الآن إلى المدرسة`,
   },
   afternoon: {
@@ -281,7 +281,7 @@ const MODES = {
     progressVerb: "تم توصيل",
     allDoneTitle: "انتهت الرحلة 🏠",
     endBtnLabel: "↗ التوجه إلى نقطة الانطلاق",
-    msgVerb: "تم توصيل طالب",
+    msgVerb: "تم توصيل الطالب",
     allDoneMsg: n => `🏠 تم توصيل جميع الطلاب (${n}/${n}) — انتهت الرحلة`,
   },
 };
@@ -354,7 +354,7 @@ function renderGoogleMapsLinks(){
 
 function messageFor(stopName){
   const time = new Date().toLocaleTimeString('ar-OM', { hour:'2-digit', minute:'2-digit' });
-  return `✅ ${mode().msgVerb} — ${stopName} — الساعة ${time}`;
+  return `✅ ${mode().msgVerb} ${stopName} — الساعة ${time}`;
 }
 function allDoneMessage(){
   const time = new Date().toLocaleTimeString('ar-OM', { hour:'2-digit', minute:'2-digit' });
@@ -509,7 +509,7 @@ function render(){
           <li class="absent" data-id="${s.id}">
             <div class="idx">✕</div>
             <div>
-              <div class="stop-name">${s.label} <span class="absent-tag">· غائب</span></div>
+              <div class="stop-name">${s.studentName} <span class="absent-tag">· غائب</span></div>
               <div class="stop-coord">${s.lat.toFixed(6)}, ${s.lng.toFixed(6)}</div>
             </div>
             <button class="undo-absent-btn" data-undo-id="${s.id}">إلغاء الغياب</button>
@@ -586,7 +586,7 @@ async function optimizeAndDrawRoute(fit = true){
   const url = `https://router.project-osrm.org/trip/v1/driving/${coordStr}?source=first&destination=last&roundtrip=false&overview=full&geometries=geojson`;
 
   // ترتيب احتياطي فوري (بانتظار استجابة خدمة التوجيه)
-  STOPS = active.map((s, i) => ({ ...s, name: "المحطة " + (i + 1) }));
+  STOPS = active.map((s, i) => ({ ...s, name: s.studentName }));
   const fallbackLatLngs = points.map(p => [p.lat, p.lng]);
   if(routeLine) map.removeLayer(routeLine);
   routeLine = L.polyline(fallbackLatLngs, { color:'#D8607E', weight:3, opacity:.5, dashArray:'1,7' }).addTo(map);
@@ -601,7 +601,7 @@ async function optimizeAndDrawRoute(fit = true){
       const orderedActive = stopWaypoints
         .map((wp, originalIdx) => ({ ...active[originalIdx], visitOrder: wp.waypoint_index }))
         .sort((a, b) => a.visitOrder - b.visitOrder);
-      STOPS = orderedActive.map((s, i) => ({ id: s.id, lat: s.lat, lng: s.lng, name: "المحطة " + (i + 1) }));
+      STOPS = orderedActive.map((s, i) => ({ id: s.id, lat: s.lat, lng: s.lng, name: s.studentName }));
 
       const roadLatLngs = data.trips[0].geometry.coordinates.map(c => [c[1], c[0]]);
       map.removeLayer(routeLine);
