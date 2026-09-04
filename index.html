@@ -291,9 +291,17 @@ let STOPS = [];              // المحطات النشطة فقط (غير ال�
 let status = new Map();      // id -> 'done' | 'absent'
 let actionHistory = [];      // مكدّس آخر الإجراءات (بمعرّفات id) للتراجع
 
+// الترتيب اليدوي الثابت للرحلة — لا يُعاد حسابه تلقائيًا، فقط يُستبعد منه
+// الطلاب الغائبون مع الحفاظ على نفس تسلسل البقية.
+const FIXED_ORDER = [
+  "عبدالرحمن", "مشعل", "ألين", "خالد", "فارس", "ديمة", "امال",
+  "طناف", "جمان", "ملاك", "حور", "ورد", "علي", "ريان",
+];
+const FIXED_STOPS = FIXED_ORDER.map(name => RAW_STOPS.find(s => s.studentName === name));
+
 function mode(){ return MODES[currentModeKey]; }
 function isAbsent(id){ return status.get(id) === 'absent'; }
-function activeRawStops(){ return RAW_STOPS.filter(s => !isAbsent(s.id)); }
+function activeFixedStops(){ return FIXED_STOPS.filter(s => !isAbsent(s.id)); }
 
 function todayKey(){
   return "route-progress:" + currentModeKey + ":" + new Date().toISOString().slice(0,10);
@@ -565,12 +573,12 @@ function drawMarkers(){
 
 let routeLine = null;
 
-// نستخدم خدمة "Trip" من OSRM لحساب أفضل ترتيب لزيارة المحطات النشطة فقط
-// (باستبعاد أي منزل مسجَّل غائبًا)، اعتمادًا على شبكة الطرق الفعلية.
-// تُستدعى هذه الدالة من جديد كلما تغيّرت قائمة الغياب حتى يتكيّف المسار.
+// الترتيب ثابت يدويًا (FIXED_ORDER) ولا يُعاد حسابه — يُستبعد منه الغائبون
+// فقط. نستخدم خدمة "Route" من OSRM (وليس "Trip") لرسم المسار الفعلي على
+// الطرق بهذا الترتيب تحديدًا، دون اقتراح ترتيب مختلف.
 async function optimizeAndDrawRoute(fit = true){
   const m = mode();
-  const active = activeRawStops();
+  const active = activeFixedStops();
 
   if(active.length === 0){
     STOPS = [];
@@ -581,37 +589,30 @@ async function optimizeAndDrawRoute(fit = true){
     return;
   }
 
+  // الترتيب معروف فورًا (ثابت)، فلا داعي لانتظار الشبكة لعرض القائمة
+  STOPS = active.map(s => ({ ...s, name: s.studentName }));
+  render();
+
   const points = [m.start, ...active, m.end];
   const coordStr = points.map(p => p.lng + "," + p.lat).join(";");
-  const url = `https://router.project-osrm.org/trip/v1/driving/${coordStr}?source=first&destination=last&roundtrip=false&overview=full&geometries=geojson`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`;
 
-  // ترتيب احتياطي فوري (بانتظار استجابة خدمة التوجيه)
-  STOPS = active.map((s, i) => ({ ...s, name: s.studentName }));
   const fallbackLatLngs = points.map(p => [p.lat, p.lng]);
   if(routeLine) map.removeLayer(routeLine);
   routeLine = L.polyline(fallbackLatLngs, { color:'#D8607E', weight:3, opacity:.5, dashArray:'1,7' }).addTo(map);
   if(fit) map.fitBounds(fallbackLatLngs, { padding:[18,18] });
-  render();
 
   try{
     const res = await fetch(url);
     const data = await res.json();
-    if(data.code === "Ok" && data.trips && data.trips[0]){
-      const stopWaypoints = data.waypoints.slice(1, 1 + active.length);
-      const orderedActive = stopWaypoints
-        .map((wp, originalIdx) => ({ ...active[originalIdx], visitOrder: wp.waypoint_index }))
-        .sort((a, b) => a.visitOrder - b.visitOrder);
-      STOPS = orderedActive.map((s, i) => ({ id: s.id, lat: s.lat, lng: s.lng, name: s.studentName }));
-
-      const roadLatLngs = data.trips[0].geometry.coordinates.map(c => [c[1], c[0]]);
+    if(data.code === "Ok" && data.routes && data.routes[0]){
+      const roadLatLngs = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
       map.removeLayer(routeLine);
       routeLine = L.polyline(roadLatLngs, { color:'#D8607E', weight:4, opacity:.85 }).addTo(map);
       if(fit) map.fitBounds(roadLatLngs, { padding:[18,18] });
-
-      render();
     }
   }catch(e){
-    console.warn("تعذّر الوصول لخدمة تحسين المسار، سيُستخدم الترتيب الاحتياطي.");
+    console.warn("تعذّر الوصول لخدمة رسم المسار، سيظهر خط مستقيم بدلًا من مسار الطرق.");
   }
 }
 
