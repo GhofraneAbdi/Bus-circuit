@@ -360,9 +360,40 @@ function renderGoogleMapsLinks(){
   }).join('');
 }
 
-function messageFor(stopName){
+function formatDuration(seconds){
+  const mins = Math.round(seconds / 60);
+  if(mins <= 0) return "أقل من دقيقة";
+  if(mins === 1) return "دقيقة واحدة";
+  if(mins === 2) return "دقيقتين";
+  if(mins <= 10) return `${mins} دقائق`;
+  return `${mins} دقيقة`;
+}
+// مجموع مدد الأرجل (legs) بين محطتين في المسار الحالي، باستخدام بيانات
+// المدة الفعلية القادمة من OSRM. يعيد null إن لم تتوفر البيانات بعد.
+function travelSeconds(fromIdx, toIdx){
+  if(!ROUTE_LEGS) return null;
+  let total = 0;
+  for(let k = fromIdx + 1; k <= toIdx; k++){
+    if(ROUTE_LEGS[k] === undefined) return null;
+    total += ROUTE_LEGS[k];
+  }
+  return total;
+}
+
+function messageFor(doneStop){
   const time = new Date().toLocaleTimeString('ar-OM', { hour:'2-digit', minute:'2-digit' });
-  return `✅ ${mode().msgVerb} ${stopName} — الساعة ${time}`;
+  let msg = `✅ ${mode().msgVerb} ${doneStop.name} — الساعة ${time}`;
+
+  const doneIdx = STOPS.findIndex(s => s.id === doneStop.id);
+  const nextPending = STOPS.slice(doneIdx + 1).find(s => status.get(s.id) !== 'done');
+  if(nextPending){
+    const nextIdx = STOPS.findIndex(s => s.id === nextPending.id);
+    const secs = travelSeconds(doneIdx, nextIdx);
+    msg += secs !== null
+      ? `\n🚌 التالي: ${nextPending.name} — خلال ${formatDuration(secs)} تقريبًا`
+      : `\n🚌 التالي: ${nextPending.name}`;
+  }
+  return msg;
 }
 function allDoneMessage(){
   const time = new Date().toLocaleTimeString('ar-OM', { hour:'2-digit', minute:'2-digit' });
@@ -440,7 +471,7 @@ function render(){
     document.getElementById('mark-done-btn').onclick = () => {
       setStatus(nextStop.id, 'done');
       const isLast = STOPS.every(s => status.get(s.id) === 'done');
-      showCopyBanner(isLast ? allDoneMessage() : messageFor(nextStop.name));
+      showCopyBanner(isLast ? allDoneMessage() : messageFor(nextStop));
       render();
     };
     document.getElementById('mark-absent-btn').onclick = () => {
@@ -494,7 +525,7 @@ function render(){
       } else {
         setStatus(id, 'done');
         const isLast = STOPS.every(s => status.get(s.id) === 'done');
-        showCopyBanner(isLast ? allDoneMessage() : messageFor(stop.name));
+        showCopyBanner(isLast ? allDoneMessage() : messageFor(stop));
       }
       render();
     };
@@ -572,6 +603,7 @@ function drawMarkers(){
 }
 
 let routeLine = null;
+let ROUTE_LEGS = null; // مدد الأرجل بين كل نقطتين متتاليتين في المسار الحالي (بالثواني)، من OSRM
 
 // الترتيب ثابت يدويًا (FIXED_ORDER) ولا يُعاد حسابه — يُستبعد منه الغائبون
 // فقط. نستخدم خدمة "Route" من OSRM (وليس "Trip") لرسم المسار الفعلي على
@@ -582,6 +614,7 @@ async function optimizeAndDrawRoute(fit = true){
 
   if(active.length === 0){
     STOPS = [];
+    ROUTE_LEGS = null;
     if(routeLine) map.removeLayer(routeLine);
     routeLine = L.polyline([[m.start.lat, m.start.lng], [m.end.lat, m.end.lng]], { color:'#D8607E', weight:3, opacity:.5, dashArray:'1,7' }).addTo(map);
     if(fit) map.fitBounds([[m.start.lat, m.start.lng], [m.end.lat, m.end.lng]], { padding:[18,18] });
@@ -591,6 +624,7 @@ async function optimizeAndDrawRoute(fit = true){
 
   // الترتيب معروف فورًا (ثابت)، فلا داعي لانتظار الشبكة لعرض القائمة
   STOPS = active.map(s => ({ ...s, name: s.studentName }));
+  ROUTE_LEGS = null; // ستُحدَّث بعد استجابة الشبكة أدناه
   render();
 
   const points = [m.start, ...active, m.end];
@@ -610,6 +644,12 @@ async function optimizeAndDrawRoute(fit = true){
       map.removeLayer(routeLine);
       routeLine = L.polyline(roadLatLngs, { color:'#D8607E', weight:4, opacity:.85 }).addTo(map);
       if(fit) map.fitBounds(roadLatLngs, { padding:[18,18] });
+
+      // مدة كل رجل بين نقطتين متتاليتين، لاستخدامها في رسائل "التالي خلال..."
+      if(data.routes[0].legs){
+        ROUTE_LEGS = data.routes[0].legs.map(l => l.duration);
+        render(); // لتحديث أي رسالة قيد العرض إن توفّرت المدة الآن
+      }
     }
   }catch(e){
     console.warn("تعذّر الوصول لخدمة رسم المسار، سيظهر خط مستقيم بدلًا من مسار الطرق.");
