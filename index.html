@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>دورة الصباح — رحلة آمنة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --bg: #FFF7F3;
+    --card: #FFFFFF;
+    --rose: #D8607E;
+    --rose-deep: #B8425F;
+    --ink: #3A2432;
+    --muted: #9C7C88;
+    --line: #F1DFE1;
+    --sage: #6FA287;
+    --sage-bg: #E9F3EC;
+    --gold: #E3A857;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: linear-gradient(180deg, #FFEFE6 0%, var(--bg) 220px, var(--bg) 100%);
+    color: var(--ink);
+    font-family: 'Tajawal', sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap{ max-width: 480px; margin: 0 auto; padding: 28px 18px 60px; }
+
+  header{ margin-bottom: 22px; }
+  .eyebrow{ font-size: 13px; color: var(--rose-deep); font-weight:700; }
+  h1{
+    font-family:'Markazi Text', serif;
+    font-weight:700;
+    font-size: 34px;
+    line-height:1.2;
+    margin: 4px 0 6px;
+  }
+  .sub{ color: var(--muted); font-size: 14.5px; }
+
+  .progress-row{
+    display:flex; align-items:center; gap:12px;
+    margin: 18px 0 24px;
+  }
+  .ring{ position:relative; width:56px; height:56px; flex-shrink:0; }
+  .ring svg{ transform: scaleX(-1) rotate(-90deg); }
+  .ring-track{ fill:none; stroke:var(--line); stroke-width:5; }
+  .ring-fill{ fill:none; stroke:var(--rose); stroke-width:5; stroke-linecap:round; transition: stroke-dasharray .4s ease; }
+  .ring-label{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; color:var(--rose-deep);
+  }
+  .progress-text{ font-size:14px; color:var(--muted); line-height:1.5; }
+  .progress-text b{ color:var(--ink); }
+
+  .current-card{
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-deep) 100%);
+    color: #fff;
+    border-radius: 20px;
+    padding: 22px 20px;
+    box-shadow: 0 10px 26px -10px rgba(184,66,95,.55);
+    margin-bottom: 18px;
+  }
+  .current-card .label{ font-size:12.5px; opacity:.85; font-weight:700; }
+  .current-card .name{ font-family:'Markazi Text', serif; font-size:29px; font-weight:700; margin: 4px 0 2px; }
+  .current-card .meta{ font-size:13.5px; opacity:.9; direction:ltr; unicode-bidi:embed; text-align:right; }
+  .navigate-btn{
+    display:inline-flex; align-items:center; gap:7px;
+    margin-top:14px; background: rgba(255,255,255,.16);
+    border:1px solid rgba(255,255,255,.35);
+    color:#fff; text-decoration:none; font-weight:700; font-size:14.5px;
+    padding:9px 15px; border-radius:11px;
+  }
+  .navigate-btn:active{ background: rgba(255,255,255,.28); }
+  .done-btn{
+    width:100%; margin-top:10px; background:#fff; color:var(--rose-deep);
+    border:none; font-weight:800; font-size:15.5px; padding:12px; border-radius:11px;
+    cursor:pointer; font-family:'Tajawal', sans-serif;
+  }
+  .done-btn:active{ transform: scale(.99); }
+
+  .all-done{
+    background: var(--sage-bg); border-radius:20px; padding:26px 20px; text-align:center;
+    margin-bottom:18px;
+  }
+  .all-done .name{ font-family:'Markazi Text', serif; font-size:25px; font-weight:700; color:#3E6B54; margin-bottom:4px;}
+  .all-done .meta{ color:#5C8A72; font-size:14px; }
+
+  #map{ height:190px; border-radius:16px; margin-bottom:22px; border:1px solid var(--line); }
+
+  .section-title{
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    margin: 4px 0 10px;
+  }
+  ul.stops{ list-style:none; margin:0; padding:0; }
+  ul.stops li{
+    display:flex; align-items:center; gap:12px;
+    background: var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:12px 14px; margin-bottom:9px;
+  }
+  ul.stops li.done{ opacity:.55; }
+  .idx{
+    width:26px; height:26px; border-radius:50%; flex-shrink:0;
+    background: var(--line); color:var(--rose-deep); font-weight:700; font-size:12.5px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  li.done .idx{ background: var(--sage); color:#fff; }
+  .stop-name{ font-weight:700; font-size:15px; }
+  .stop-coord{ color:var(--muted); font-size:12px; margin-top:1px; direction:ltr; unicode-bidi:embed; text-align:right; }
+  .check{
+    margin-inline-start:auto; width:22px; height:22px; border-radius:7px;
+    border:2px solid var(--line); flex-shrink:0; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  li.done .check{ background:var(--sage); border-color:var(--sage); color:#fff; font-size:14px; }
+
+  footer{ text-align:center; color:var(--muted); font-size:12.5px; margin-top:26px; }
+  .reset{
+    display:block; margin: 14px auto 0; background:none; border:none;
+    color:var(--rose-deep); font-size:13.5px; font-weight:700; cursor:pointer;
+    text-decoration:underline; font-family:'Tajawal', sans-serif;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">رحلة آمنة · دورة الصباح</div>
+    <h1>مسار اليوم</h1>
+    <div class="sub">١٤ محطة، مرتّبة لتفادي الرجوع للخلف</div>
+  </header>
+
+  <div class="progress-row">
+    <div class="ring">
+      <svg width="56" height="56" viewBox="0 0 56 56">
+        <circle class="ring-track" cx="28" cy="28" r="24"></circle>
+        <circle class="ring-fill" id="ring-fill" cx="28" cy="28" r="24" stroke-dasharray="0 151"></circle>
+      </svg>
+      <div class="ring-label" id="ring-label">0/14</div>
+    </div>
+    <div class="progress-text" id="progress-text">لم يتم استلام أي طالب بعد — اضغط <b>توجيه</b> للانطلاق إلى المحطة الأولى.</div>
+  </div>
+
+  <div id="current-slot"></div>
+
+  <div id="map"></div>
+
+  <div class="section-title">الترتيب الكامل</div>
+  <ul class="stops" id="stops-list"></ul>
+
+  <button class="reset" id="reset-btn">إعادة تعيين تقدّم اليوم</button>
+  <footer>العامرات · مسار مدرسي لـ ١٤ محطة</footer>
+</div>
+
+<script>
+const START = { name: "نقطة الانطلاق", lat: 23.469158, lng: 58.475975 };
+const END   = { name: "المدرسة (نقطة التسليم)", lat: 23.534421, lng: 58.456905 };
+
+const STOPS = [
+  { lat: 23.477276, lng: 58.474827 },
+  { lat: 23.479507, lng: 58.476406 },
+  { lat: 23.479063, lng: 58.472530 },
+  { lat: 23.481443, lng: 58.471748 },
+  { lat: 23.481047, lng: 58.469006 },
+  { lat: 23.483963, lng: 58.474094 },
+  { lat: 23.487284, lng: 58.470703 },
+  { lat: 23.489319, lng: 58.476501 },
+  { lat: 23.491389, lng: 58.477056 },
+  { lat: 23.491694, lng: 58.477667 },
+  { lat: 23.491472, lng: 58.477889 },
+  { lat: 23.492870, lng: 58.478542 },
+  { lat: 23.490744, lng: 58.481663 },
+  { lat: 23.492619, lng: 58.483624 },
+].map((s, i) => ({ ...s, name: "المحطة " + (i + 1) }));
+
+const todayKey = () => "route-progress:" + new Date().toISOString().slice(0,10);
+let completed = new Set();
+
+function loadProgress(){
+  try{
+    const raw = localStorage.getItem(todayKey());
+    if(raw){ completed = new Set(JSON.parse(raw)); }
+  }catch(e){ /* لا يوجد تقدم محفوظ بعد، أو التخزين غير متاح */ }
+  render();
+}
+function saveProgress(){
+  try{
+    localStorage.setItem(todayKey(), JSON.stringify([...completed]));
+  }catch(e){
+    console.warn("لن يتم حفظ التقدم بعد إعادة تحميل الصفحة (التخزين غير متاح).");
+  }
+}
+
+function navUrl(lat, lng){
+  return "https://www.google.com/maps/dir/?api=1&destination=" + lat + "," + lng + "&travelmode=driving";
+}
+
+function render(){
+  const total = STOPS.length;
+  const doneCount = completed.size;
+  const pct = doneCount / total;
+  const circumference = 2 * Math.PI * 24;
+  document.getElementById('ring-fill').setAttribute('stroke-dasharray', (circumference*pct).toFixed(1) + " " + circumference.toFixed(1));
+  document.getElementById('ring-label').textContent = doneCount + "/" + total;
+
+  const nextStop = STOPS.find(s => !completed.has(s.name));
+  const progressText = document.getElementById('progress-text');
+  const currentSlot = document.getElementById('current-slot');
+
+  if(nextStop){
+    progressText.innerHTML = doneCount === 0
+      ? "لم يتم استلام أي طالب بعد — توجّهي إلى المحطة الأولى."
+      : "تم استلام <b>" + doneCount + " من " + total + "</b> حتى الآن.";
+    currentSlot.innerHTML = `
+      <div class="current-card">
+        <div class="label">المحطة التالية</div>
+        <div class="name">${nextStop.name}</div>
+        <div class="meta">${nextStop.lat.toFixed(6)}, ${nextStop.lng.toFixed(6)}</div>
+        <a class="navigate-btn" href="${navUrl(nextStop.lat, nextStop.lng)}" target="_blank" rel="noopener">↗ توجيه</a>
+        <button class="done-btn" id="mark-done-btn">تم الاستلام</button>
+      </div>`;
+    document.getElementById('mark-done-btn').onclick = () => {
+      completed.add(nextStop.name);
+      saveProgress();
+      render();
+    };
+  } else {
+    progressText.innerHTML = "<b>جميع المحطات الـ١٤</b> تم استلامها.";
+    currentSlot.innerHTML = `
+      <div class="all-done">
+        <div class="name">الجميع في الحافلة 🌅</div>
+        <div class="meta">توجّهي إلى ${END.name} — ${END.lat.toFixed(6)}, ${END.lng.toFixed(6)}</div>
+        <a class="navigate-btn" style="background:var(--sage);border-color:var(--sage);margin-top:12px;color:#fff" href="${navUrl(END.lat, END.lng)}" target="_blank" rel="noopener">↗ التوجه إلى المدرسة</a>
+      </div>`;
+  }
+
+  const list = document.getElementById('stops-list');
+  list.innerHTML = STOPS.map((s, i) => {
+    const done = completed.has(s.name);
+    return `<li class="${done ? 'done' : ''}" data-name="${s.name}">
+      <div class="idx">${i+1}</div>
+      <div>
+        <div class="stop-name">${s.name}</div>
+        <div class="stop-coord">${s.lat.toFixed(6)}, ${s.lng.toFixed(6)}</div>
+      </div>
+      <div class="check">${done ? '✓' : ''}</div>
+    </li>`;
+  }).join('');
+
+  list.querySelectorAll('li').forEach(li => {
+    li.querySelector('.check').onclick = () => {
+      const name = li.dataset.name;
+      if(completed.has(name)) completed.delete(name); else completed.add(name);
+      saveProgress();
+      render();
+    };
+  });
+}
+
+document.getElementById('reset-btn').onclick = () => {
+  completed = new Set();
+  saveProgress();
+  render();
+};
+
+// الخريطة
+const map = L.map('map', { zoomControl:false, attributionControl:false }).setView([23.486, 58.476], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+function dot(color){
+  return L.divIcon({ className:'', html:`<div style="width:12px;height:12px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>`, iconSize:[12,12] });
+}
+L.marker([START.lat, START.lng], { icon: dot('#E3A857') }).addTo(map);
+STOPS.forEach(s => L.marker([s.lat, s.lng], { icon: dot('#D8607E') }).addTo(map));
+L.marker([END.lat, END.lng], { icon: dot('#6FA287') }).addTo(map);
+
+const allPoints = [START, ...STOPS, END];
+const routeLatLngs = allPoints.map(p => [p.lat, p.lng]);
+map.fitBounds(routeLatLngs, { padding:[18,18] });
+
+// خط متقطع مستقيم يظهر فورًا، ثم يُستبدل بالمسار الحقيقي على الطرق
+// بمجرد استجابة خدمة التوجيه.
+let routeLine = L.polyline(routeLatLngs, { color:'#D8607E', weight:3, opacity:.5, dashArray:'1,7' }).addTo(map);
+
+async function drawRoadRoute(){
+  const coordStr = allPoints.map(p => p.lng + "," + p.lat).join(";");
+  const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`;
+  try{
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.code === "Ok" && data.routes && data.routes[0]){
+      const roadLatLngs = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+      map.removeLayer(routeLine);
+      routeLine = L.polyline(roadLatLngs, { color:'#D8607E', weight:4, opacity:.85 }).addTo(map);
+    }
+  }catch(e){
+    console.warn("خدمة التوجيه غير متاحة، سيظهر المسار كخط مستقيم.");
+  }
+}
+drawRoadRoute();
+
+loadProgress();
+</script>
+</body>
+</html>
